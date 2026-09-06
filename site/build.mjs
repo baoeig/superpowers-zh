@@ -10,6 +10,7 @@ import {
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
+import { execFileSync } from 'child_process';
 import { renderMarkdown } from './md.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,6 +26,21 @@ const cssVer = createHash('sha256').update(readFileSync(join(TEMPLATE, 'styles.c
 const jsVer = createHash('sha256').update(readFileSync(join(TEMPLATE, 'app.js'))).digest('hex').slice(0, 10);
 // og 图的内容 hash：社交平台会长期缓存分享图，URL 不变就永远抓不到新图
 const ogVer = createHash('sha256').update(readFileSync(join(ROOT, 'assets', 'og-image.jpg'))).digest('hex').slice(0, 10);
+
+// sitemap 的 lastmod 取「这一页对应的源文件最后一次提交的日期」，而不是构建当天。
+// 原来 66 条 URL 共用构建日期：页面几个月没动过也天天报「今天改的」。Google 明确
+// 说过 lastmod 长期不可靠就会被忽略 —— 那这个字段等于白写。顺带它还让构建不可复现。
+//
+// 浅克隆（fetch-depth:1）里 git 只有一个提交，按路径查会全部返回同一天；因此部署
+// workflow 已改为 fetch-depth: 0。拿不到 git 时回退到构建日期，不让构建失败。
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+function lastCommitDate(paths) {
+  try {
+    const out = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...paths],
+      { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(out) ? out : BUILD_DATE;
+  } catch { return BUILD_DATE; }
+}
 
 // 从 RELEASE-NOTES.zh.md 读最新版本条目。
 // 动机：v1.7.11 的全部意义是「六款工具此前装了不生效，请重装」，而官网此前
@@ -42,7 +58,7 @@ if (LATEST.version !== PKG.version) {
 }
 
 // 本版需要重装的工具（三语共用；产品名不翻译）。改这里时同步改 release notes 正文。
-const REINSTALL_TOOLS = ['Codex CLI', 'VS Code', 'Windsurf', 'Qwen Code', 'DeerFlow', 'Claw Code'];
+const REINSTALL_TOOLS = ['Claude Code 插件市场安装', 'Crush（Windows）'];
 
 // 页脚二维码的真实像素尺寸，构建时从文件读取（见 imageSize 的注释）
 const QR = {
@@ -354,7 +370,7 @@ const T = {
     skipToMain: '跳到主要内容',
     ogAlt: 'superpowers-zh —— AI 编程超能力中文增强版，一条 npx 命令为 23 款 AI 编程工具装上系统化工作方法论',
     ogLocale: 'zh_CN',
-    releaseNote: '{tools} 用户请重新安装 —— 此前版本装了不生效。查看完整更新说明',
+    releaseNote: '{tools} 的用户请更新 —— 此前版本里技能之间互相调用会失败。查看完整更新说明',
     toolDocHint: '{name} 的专属安装指南',
     whyTitle: '为什么选择 superpowers-zh？',
     whySub: '不是又一套提示词模板 —— 是让 AI 真正按工程方法干活的系统化能力。',
@@ -491,7 +507,7 @@ const T = {
     skipToMain: 'Skip to main content',
     ogAlt: 'superpowers-zh — battle-tested AI coding skills, Chinese-enhanced; one npx command for 23 AI coding tools',
     ogLocale: 'en_US',
-    releaseNote: '{tools} users should reinstall — earlier versions installed to the wrong place. Read the full release notes',
+    releaseNote: 'Using {tools}? Update — in earlier versions skills could not invoke one another. Read the full release notes',
     toolDocHint: 'Install guide for {name}',
     whyTitle: 'Why superpowers-zh?',
     whySub: 'Not another prompt-template pack — real engineering methodology that makes AI work properly.',
@@ -628,7 +644,7 @@ const T = {
     skipToMain: '跳到主要內容',
     ogAlt: 'superpowers-zh —— AI 編程超能力中文增強版，一條 npx 命令為 23 款 AI 編程工具裝上系統化工作方法論',
     ogLocale: 'zh_TW',
-    releaseNote: '{tools} 使用者請重新安裝 —— 此前版本裝了不生效。檢視完整更新說明',
+    releaseNote: '{tools} 的使用者請更新 —— 此前版本裡技能之間互相呼叫會失敗。檢視完整更新說明',
     toolDocHint: '{name} 的專屬安裝指南',
     whyTitle: '為什麼選擇 superpowers-zh？',
     whySub: '不是又一套提示詞範本 —— 是讓 AI 真正按工程方法幹活的系統化能力。',
@@ -1342,15 +1358,18 @@ function build() {
     'User-agent: *\nAllow: /\n\nSitemap: ' + SITE_URL + '/sitemap.xml\n');
 
   const today = new Date().toISOString().slice(0, 10);
+  // 每条 URL 记下它「内容来自哪些源文件」，据此取 lastmod：
+  //   skill 详情页 -> 该 skill 目录；首页 / 赞助页 -> 生成器与模板（文案都写在里面）
+  const tmplPaths = ['site/build.mjs', 'site/template'];
   const urls = [];
   for (const L of LANGS) {
-    urls.push(`/${L.dir}`);
-    urls.push(`/${L.dir}sponsors`);
-    for (const s of skills) urls.push(`/${L.dir}skills/${s.name}`);
+    urls.push({ u: `/${L.dir}`, src: tmplPaths });
+    urls.push({ u: `/${L.dir}sponsors`, src: [...tmplPaths, 'assets/sponsors'] });
+    for (const s of skills) urls.push({ u: `/${L.dir}skills/${s.name}`, src: [`skills/${s.name}`] });
   }
   const sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-    urls.map(u => `  <url><loc>${SITE_URL}${u}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${u === '/' ? '1.0' : (u.endsWith('/') ? '0.8' : '0.7')}</priority></url>`).join('\n') +
+    urls.map(({ u, src }) => `  <url><loc>${SITE_URL}${u}</loc><lastmod>${lastCommitDate(src)}</lastmod><changefreq>weekly</changefreq><priority>${u === '/' ? '1.0' : (u.endsWith('/') ? '0.8' : '0.7')}</priority></url>`).join('\n') +
     '\n</urlset>\n';
   writeFileSync(join(DIST, 'sitemap.xml'), sitemap);
 
