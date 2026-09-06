@@ -231,7 +231,7 @@ npx superpowers-zh --global --tool claude   # 或指定工具
 
 全域安裝把 skills 裝到工具的**使用者級目錄**（如 `~/.claude/skills`），一次安裝所有專案自動可用，更新時也只需重裝一次。**專案級優先、全域兜底**，二者可共存。
 
-支援通用全域安裝的工具（均為 docs 已證實的使用者級載入路徑）：**Claude Code · Codex CLI · Qoder · Windsurf · Qwen Code · OpenClaw · OpenCode · Crush · Hermes Agent · CodeBuddy · CodeArts**。其中 **Codex CLI** 全域裝到 `~/.agents/skills`（Codex 啟動掃描目錄）。其餘工具（Cursor / Kiro / Trae / Aider / DeerFlow / VS Code / Claw / Cline / Kilo Code）規則是專案級或存於應用內設定，`--global` 會提示改用專案級；**Gemini CLI / Antigravity** 有各自專屬的全域方式（Gemini 走擴充目錄），見對應 `docs/README.*.md`。
+支援通用全域安裝的工具（均為 docs 已證實的使用者級載入路徑）：**Claude Code · Codex CLI · Qoder · Windsurf · Qwen Code · OpenClaw · OpenCode · Crush · Hermes Agent · CodeBuddy · CodeArts**。其中 **Codex CLI** 全域裝到 `~/.agents/skills`（Codex 啟動掃描目錄）；**Crush** 在 Windows 上裝到 `%LOCALAPPDATA%\crush\skills`（其 README 明確 Windows 走這裡，不是 `~/.config`）。其餘工具（Cursor / Kiro / Trae / Aider / DeerFlow / VS Code / Claw / Cline / Kilo Code）規則是專案級或存於應用內設定，`--global` 會提示改用專案級；**Gemini CLI / Antigravity** 有各自專屬的全域方式（Gemini 走擴充目錄），見對應 `docs/README.*.md`。
 
 | | 專案級（預設） | 全域（`--global`） |
 |---|---|---|
