@@ -446,3 +446,15 @@ MIT License — 自由使用，商業或個人均可。
 [Star 本專案](https://github.com/jnMetaCode/superpowers-zh) · [提交 Issue](https://github.com/jnMetaCode/superpowers-zh/issues) · [貢獻程式碼](https://github.com/jnMetaCode/superpowers-zh/pulls)
 
 </div>
+
+---
+
+## 📈 Star 趨勢
+
+<a href="https://star-history.com/#jnMetaCode/superpowers-zh&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jnMetaCode/superpowers-zh&type=Date&theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=jnMetaCode/superpowers-zh&type=Date">
+    <img alt="superpowers-zh 的 GitHub Star 增長曲線" src="https://api.star-history.com/svg?repos=jnMetaCode/superpowers-zh&type=Date">
+  </picture>
+</a>
