@@ -227,6 +227,33 @@ else
     fi
   done
 
+  # 3e. 正文级上游漂移：自上次同步基线以来，上游动了哪些我们镜像的文件
+  #
+  # 3c/3c-bis 只比标题数 —— 上游把一节正文重写 50 行、标题数不变，我们这边完全
+  # 看不见。v6.3.0 给 subagent-driven-development 加了 113 行就是这么溜过去的。
+  # .upstream-sync.json 记着上次同步对齐到的 commit，据此把「欠同步的量」算成数字。
+  # 报 warn 不报 fail：同步是有计划的内容工作，不该卡住每一次构建。
+  SYNC_FILE="$ROOT/.upstream-sync.json"
+  if [ -f "$SYNC_FILE" ] && command -v node >/dev/null 2>&1; then
+    base=$(node -p "require('$SYNC_FILE').commit" 2>/dev/null)
+    basever=$(node -p "require('$SYNC_FILE').version" 2>/dev/null)
+    if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+      drift=$(git diff --numstat "$base" upstream/main -- skills hooks 2>/dev/null \
+              | awk '{a+=$1; d+=$2; n++} END {printf "%d %d %d", n+0, a+0, d+0}')
+      set -- $drift; nfiles=$1; nadd=$2; ndel=$3
+      if [ "${nfiles:-0}" = "0" ]; then
+        ok   # 与上游完全同步
+      else
+        warn "欠同步: 自 ${basever} 基线以来上游改了 ${nfiles} 个镜像文件（+${nadd} / -${ndel} 行）—— 明细: git diff --stat ${base} upstream/main -- skills hooks"
+      fi
+    else
+      warn "无法解析 .upstream-sync.json 的基线 commit（${base:-空}）—— 同步漂移检查已跳过"
+    fi
+  else
+    warn ".upstream-sync.json 缺失 —— 无法计算与上游的正文级漂移"
+  fi
+
+
   # 3d. requesting-code-review/code-reviewer.md 结构（v5.1.0 self-contained）
   up=$(git show upstream/main:skills/requesting-code-review/code-reviewer.md 2>/dev/null | count_headings || echo 0)
   our=$(count_headings < skills/requesting-code-review/code-reviewer.md)
