@@ -217,8 +217,14 @@ else
       ok
     elif [ "$delta" -gt "$declared" ]; then
       bad "未声明的 fork 增量: ${s} 比上游多 ${delta} 节，但只声明了 ${declared} 节 —— 给增量节加上「${FORK_MARK}」标记，或回归上游"
+    else
+      # delta < declared = 上游加了章节而我们没跟。
+      # 这一支原来既不 ok 也不 bad —— 什么都不计。于是上游一发新版，PASS 总数就
+      # 悄悄少一条，而「少的是哪一节」没有任何人看得见（v6.3.0 给 brainstorming
+      # 加了 2 节，就是这么溜过去的）。3c 的漂移检查容忍 ≤3 节，正好把这种小幅
+      # 落后一起放过 —— 两道网都漏。现在明确报出来。
+      warn "落后上游: ${s} 比上游少 $((declared - delta)) 节（上游 H=${up}, 我们 H=${our}, 已声明 fork 增量 ${declared} 节）—— 上游新增内容待同步"
     fi
-    # delta < declared 由 3c 的漂移检查覆盖，此处不重复报
   done
 
   # 3d. requesting-code-review/code-reviewer.md 结构（v5.1.0 self-contained）
